@@ -1,57 +1,67 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Icon from '../../../components/AppIcon';
+import { useAuth } from '../../../hooks/useAuth';
 
-const AuthForm = ({ activeTab, setActiveTab, onSubmit, isLoading }) => {
+const AuthForm = ({ activeTab, setActiveTab }) => {
   const [email, setEmail] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [resendTimer, setResendTimer] = useState(0);
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const navigate = useNavigate();
+  const { signUp, signIn, signInWithOAuth } = useAuth();
 
-  const handleEmailSubmit = (e) => {
+  const handleEmailSubmit = async (e) => {
     e?.preventDefault();
-    if (email) {
-      setOtpSent(true);
-      setResendTimer(60);
-      const timer = setInterval(() => {
-        setResendTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      onSubmit({ type: 'email', email });
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      if (activeTab === 'register') {
+        const { data, error } = await signUp(email, password);
+        if (error) {
+          setError(error.message);
+        } else {
+          setMessage('Check your email for the confirmation link!');
+        }
+      } else {
+        const { data, error } = await signIn(email, password);
+        if (error) {
+          setError(error.message);
+        } else {
+          navigate('/dashboard');
+        }
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleOtpSubmit = (e) => {
-    e?.preventDefault();
-    if (otp?.length === 6) {
-      onSubmit({ type: 'otp', email, otp });
+  const handleSocialAuth = async (provider) => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const { error } = await signInWithOAuth(provider);
+      if (error) {
+        setError(error.message);
+      }
+    } catch (err) {
+      setError('Social authentication failed');
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleResendOtp = () => {
-    if (resendTimer === 0) {
-      setResendTimer(60);
-      const timer = setInterval(() => {
-        setResendTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      onSubmit({ type: 'resend', email });
-    }
-  };
-
-  const handleSocialAuth = (provider) => {
-    onSubmit({ type: provider });
   };
 
   return (
@@ -86,6 +96,27 @@ const AuthForm = ({ activeTab, setActiveTab, onSubmit, isLoading }) => {
           </div>
         </div>
       )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-2">
+            <Icon name="AlertCircle" size={20} className="text-destructive" />
+            <span className="text-sm font-medium text-destructive">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {message && (
+        <div className="bg-success/10 border border-success/20 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-2">
+            <Icon name="CheckCircle" size={20} className="text-success" />
+            <span className="text-sm font-medium text-success">{message}</span>
+          </div>
+        </div>
+      )}
+
       {/* Social Authentication */}
       <div className="space-y-3 mb-6">
         <Button
@@ -103,15 +134,16 @@ const AuthForm = ({ activeTab, setActiveTab, onSubmit, isLoading }) => {
         <Button
           variant="outline"
           fullWidth
-          onClick={() => handleSocialAuth('apple')}
+          onClick={() => handleSocialAuth('github')}
           disabled={isLoading}
-          iconName="Apple"
+          iconName="Github"
           iconPosition="left"
           className="h-12"
         >
-          Continue with Apple
+          Continue with GitHub
         </Button>
       </div>
+
       {/* Divider */}
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
@@ -121,93 +153,41 @@ const AuthForm = ({ activeTab, setActiveTab, onSubmit, isLoading }) => {
           <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
         </div>
       </div>
-      {/* Email/OTP Form */}
-      {!otpSent ? (
-        <form onSubmit={handleEmailSubmit} className="space-y-4">
-          <Input
-            type="email"
-            label="Email Address"
-            placeholder="Enter your email address"
-            value={email}
-            onChange={(e) => setEmail(e?.target?.value)}
-            required
-            disabled={isLoading}
-          />
-          
-          <Button
-            type="submit"
-            variant="default"
-            fullWidth
-            loading={isLoading}
-            disabled={!email || isLoading}
-            className="h-12"
-          >
-            {activeTab === 'login' ? 'Send Login Code' : 'Create Account'}
-          </Button>
-        </form>
-      ) : (
-        <form onSubmit={handleOtpSubmit} className="space-y-4">
-          <div className="text-center mb-4">
-            <Icon name="Mail" size={48} className="text-accent mx-auto mb-2" />
-            <h3 className="text-lg font-medium text-foreground mb-1">
-              Check your email
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              We sent a 6-digit code to <span className="font-medium">{email}</span>
-            </p>
-          </div>
 
-          <Input
-            type="text"
-            label="Verification Code"
-            placeholder="Enter 6-digit code"
-            value={otp}
-            onChange={(e) => setOtp(e?.target?.value?.replace(/\D/g, '')?.slice(0, 6))}
-            required
-            maxLength={6}
-            disabled={isLoading}
-            className="text-center text-lg tracking-widest"
-          />
-
-          <Button
-            type="submit"
-            variant="default"
-            fullWidth
-            loading={isLoading}
-            disabled={otp?.length !== 6 || isLoading}
-            className="h-12"
-          >
-            Verify & Continue
-          </Button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={handleResendOtp}
-              disabled={resendTimer > 0}
-              className={`text-sm transition-smooth ${
-                resendTimer > 0
-                  ? 'text-muted-foreground cursor-not-allowed'
-                  : 'text-accent hover:text-accent/80'
-              }`}
-            >
-              {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setOtpSent(false);
-              setOtp('');
-              setResendTimer(0);
-            }}
-            className="w-full text-sm text-muted-foreground hover:text-foreground transition-smooth"
-          >
-            ← Back to email
-          </button>
-        </form>
-      )}
+      {/* Email/Password Form */}
+      <form onSubmit={handleEmailSubmit} className="space-y-4">
+        <Input
+          type="email"
+          label="Email Address"
+          placeholder="Enter your email address"
+          value={email}
+          onChange={(e) => setEmail(e?.target?.value)}
+          required
+          disabled={isLoading}
+        />
+        
+        <Input
+          type="password"
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e?.target?.value)}
+          required
+          disabled={isLoading}
+          description={activeTab === 'register' ? 'Password must be at least 6 characters' : undefined}
+        />
+        
+        <Button
+          type="submit"
+          variant="default"
+          fullWidth
+          loading={isLoading}
+          disabled={!email || !password || isLoading}
+          className="h-12"
+        >
+          {activeTab === 'login' ? 'Sign In' : 'Create Account'}
+        </Button>
+      </form>
     </div>
   );
 };

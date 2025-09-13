@@ -3,6 +3,7 @@ import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
 import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
 import NotFound from "pages/NotFound";
+import ProtectedRoute from './components/ProtectedRoute';
 import Authentication from './pages/authentication';
 import AdminDashboard from './pages/admin-dashboard';
 import CreditPurchase from './pages/credit-purchase';
@@ -17,13 +18,13 @@ const Routes = () => {
       <ScrollToTop />
       <RouterRoutes>
         {/* Define your route here */}
-        <Route path="/" element={<AccountSettings />} />
+        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/authentication" element={<Authentication />} />
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/credit-purchase" element={<CreditPurchase />} />
-        <Route path="/generated-images-gallery" element={<GeneratedImagesGallery />} />
-        <Route path="/account-settings" element={<AccountSettings />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/credit-purchase" element={<ProtectedRoute><CreditPurchase /></ProtectedRoute>} />
+        <Route path="/generated-images-gallery" element={<ProtectedRoute><GeneratedImagesGallery /></ProtectedRoute>} />
+        <Route path="/account-settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
       </ErrorBoundary>

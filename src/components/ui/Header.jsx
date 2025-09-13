@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../AppIcon';
 import Button from './Button';
+import { useAuth } from '../../hooks/useAuth';
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -11,6 +12,7 @@ const Header = () => {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const navigationItems = [
     { label: 'Create', path: '/dashboard', icon: 'Sparkles' },
@@ -40,7 +42,9 @@ const Header = () => {
   };
 
   const handleLogout = () => {
-    navigate('/authentication');
+    signOut().then(() => {
+      navigate('/authentication');
+    });
     setIsProfileDropdownOpen(false);
   };
 
@@ -179,8 +183,10 @@ const Header = () => {
                     >
                       <Icon name="LogOut" size={16} />
                       <span>Sign Out</span>
-                    </button>
-                  </div>
+                  <p className="text-sm font-medium text-foreground">
+                    {user?.user_metadata?.full_name || 'User'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
             )}
